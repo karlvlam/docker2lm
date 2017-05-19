@@ -1,0 +1,15 @@
+{
+  "name": "docker2lm",
+  "version": "0.1.0",
+  "description": "",
+  "main": "docker2lm.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node docker2lm.js"
+  },
+  "author": "Karl Lam <karl.v.lam@gmail.com>",
+  "license": "MIT",
+  "dependencies": {
+      "dockerode": "2.4.3"
+  }
+}
