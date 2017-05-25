@@ -208,6 +208,7 @@ function listenDockerLog(info){
         // add the Labels to the real log object
         try{
             // fire the log!
+            l['type'] = 'docker-log';
             l['marker'] = CUSTOM_FIELD;
             l['labels'] = info['labels'];
             api_write(API_KEY, JSON.stringify(l));
