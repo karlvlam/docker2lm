@@ -42,7 +42,7 @@ var docker = new Docker({socketPath: '/var/run/docker.sock'}); // unix socket
 
 const LOG_TIME = 5000; // query docker api time interval
 const EVENT_TIME = 5000; // query docker event time interval
-const STATS_TIME = 30000; // get docker stats time interval 
+const STATS_TIME = 60000; // get docker stats time interval 
 var logTimer = null;
 var eventTimer = null;
 var statsTimer = null;
