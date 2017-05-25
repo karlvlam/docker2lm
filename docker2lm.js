@@ -40,10 +40,12 @@ var dockerEvtSocket = null; // docker event listener socket
 
 var docker = new Docker({socketPath: '/var/run/docker.sock'}); // unix socket
 
-var LOG_TIME = 5000; // query docker api time interval
-var EVENT_TIME = 5000; 
+const LOG_TIME = 5000; // query docker api time interval
+const EVENT_TIME = 5000; // query docker event time interval
+const STATS_TIME = 30000; // get docker stats time interval 
 var logTimer = null;
 var eventTimer = null;
+var statsTimer = null;
 
 /* STARTS */
 if (!config.applog){
@@ -76,8 +78,10 @@ setInterval(function(){
 * 
 * Change docker log buffer to json object:
 * {
-*     timestamp: "unix time in ISO String"
-*     message: "log content"
+* 
+*     type: 'docker-log',
+*     timestamp: "unix time in ISO String",
+*     message: "log content",
 * }
 * 
 * */
@@ -85,12 +89,44 @@ function dockerLogToObj(chunk){
     try{
         var s = chunk.toString();
         return { 
+            marker: CUSTOM_FIELD,
+            type: 'docker-log',
             timestamp: new Date(s.substr(0, 30)).toISOString(),
             message: s.substr(31).trim()
         }
     }catch(err){
     }
 }
+
+function dockerStatsToObj(stats){
+    try{
+        var t = stats['read'];
+        delete stats['read'];
+        delete stats['preread'];
+        return { 
+            marker: CUSTOM_FIELD,
+            type: 'docker-stats',
+            timestamp: new Date(t.substr(0, 30)).toISOString(),
+            stats: stats, 
+        }
+    }catch(err){
+    }
+}
+
+async function logDockerStats(){
+    // get all containers
+    log("test");
+    var containers = await getContainers();
+
+    //var c = containers[0];
+    containers.map(async function(c){
+        var a = await docker.getContainer(c.Id);
+        var s = await a.stats({stream:false});
+        api_write(API_KEY, JSON.stringify(dockerStatsToObj(s)));
+    });
+   
+    
+};
 
 
 /*
@@ -119,6 +155,7 @@ function connectAPI(){
 
             logContainers();
             listenDockerEvent();
+            logDockerStats();
 
             // keep log skipped containers
             clearInterval(logTimer);
@@ -127,6 +164,10 @@ function connectAPI(){
             // reconnect the docker event API
             clearInterval(eventTimer);
             eventTimer = setInterval(listenDockerEvent, EVENT_TIME);
+
+            clearInterval(statsTimer);
+            statsTimer = setInterval(logDockerStats, STATS_TIME); 
+
         }else{
             log("Logmatic failed!");
         }
@@ -208,8 +249,6 @@ function listenDockerLog(info){
         // add the Labels to the real log object
         try{
             // fire the log!
-            l['type'] = 'docker-log';
-            l['marker'] = CUSTOM_FIELD;
             l['labels'] = info['labels'];
             api_write(API_KEY, JSON.stringify(l));
         }catch(err){
