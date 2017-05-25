@@ -115,14 +115,16 @@ function dockerStatsToObj(stats){
 
 async function logDockerStats(){
     // get all containers
-    log("test");
     var containers = await getContainers();
 
     //var c = containers[0];
     containers.map(async function(c){
         var a = await docker.getContainer(c.Id);
         var s = await a.stats({stream:false});
-        api_write(API_KEY, JSON.stringify(dockerStatsToObj(s)));
+        var labels = format.getLabel(LABEL_MAP, c['Labels']);
+        var o =  dockerStatsToObj(s);
+        o['labels'] = labels;
+        api_write(API_KEY, JSON.stringify(o));
     });
    
     
