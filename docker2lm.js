@@ -53,6 +53,7 @@ function cleanPool(id){
     delete containerPool[id]; // remove socket object from the pool
     delete statsPool[id];
 }
+
 /* STARTS */
 if (!config.applog){
     console.log('Nothing is going to shipped, exit!');
@@ -119,20 +120,68 @@ function dockerStatsToObj(stats){
     }
 }
 
+function flattenStats(stats){
+    var o = {
+        read: null,
+        cpu_usage: 0, 
+        cpu_sys: 0,
+        mem_rss: 0,
+        mem_usage: 0,
+        mem_limit: 0,
+        net_rx_byte: 0,
+        net_tx_byte: 0,
+    }
+
+    o.read = stats.read;
+    o.cpu_usage = stats.cpu_stats.cpu_usage.total_usage || 0;
+    o.cpu_sys = stats.cpu_stats.system_cpu_usage || 0;
+    o.mem_rss = stats.memory_stats.stats.total_rss || 0;
+    o.mem_usage = stats.memory_stats.usage || 0;
+    o.mem_limit = stats.memory_stats.limit || 0;
+    Object.keys(stats.networks).map(function(n){
+        o.net_tx_byte += n.tx_bytes;
+        o.net_rx_byte += n.rx_bytes;
+    })
+    if (!o.net_tx_byte) { o.net_tx_byte = 0 }
+    if (!o.net_rx_byte) { o.net_rx_byte = 0 }
+    
+    return o; 
+} 
+
+function diffStats(a,b){
+    var o = {
+        read: a.read,
+        cpu_usage: a.cpu_usage - b.cpu_usage, 
+        cpu_sys: a.cpu_sys - b.cpu_sys,
+        mem_rss: a.mem_rss,
+        mem_usage: a.mem_usage,
+        mem_limit: a.mem_limit,
+        net_rx_byte: a.net_rx_byte - b.net_rx_byte,
+        net_tx_byte: a.net_tx_byte - b.net_tx_byte,
+    }
+    return o;
+}
+
 async function logDockerStats(){
     // get all containers
     var containers = await getContainers();
 
-    //var c = containers[0];
     containers.map(async function(c){
-        var a = await docker.getContainer(c.Id);
+        var id = c.Id;
+        var a = await docker.getContainer(id);
         var s = await a.stats({stream:false});
         var labels = format.getLabel(LABEL_MAP, c['Labels']);
-        var o =  dockerStatsToObj(s);
-        o['labels'] = labels;
-        api_write(API_KEY, JSON.stringify(o));
+        var a_stats = flattenStats(s);
+        var b_stats = statsPool[id];
+        statsPool[id] = a_stats;
+        if (b_stats) {
+            var o = diffStats(a_stats, b_stats);
+            o =  dockerStatsToObj(o);
+            o['labels'] = labels;
+            api_write(API_KEY, JSON.stringify(o));
+        }
+
     });
-   
     
 };
 
