@@ -34,6 +34,7 @@ const CUSTOM_FIELD = config['custom_field'];
 const LABEL_MAP = format.getLabelNameMapping(config['applog']['label']);
 
 var containerPool = {}; // keep a connection pool of docker api
+var statsPool = {}; // keep a stats pool for cpu + io usage calculation 
 
 var apiSocket = null; // socket object to Logmatic
 var dockerEvtSocket = null; // docker event listener socket
@@ -47,6 +48,11 @@ var logTimer = null;
 var eventTimer = null;
 var statsTimer = null;
 
+
+function cleanPool(id){
+    delete containerPool[id]; // remove socket object from the pool
+    delete statsPool[id];
+}
 /* STARTS */
 if (!config.applog){
     console.log('Nothing is going to shipped, exit!');
@@ -296,7 +302,7 @@ function listenDockerLog(info){
 
         stream.on('end', function(){
             log('Container stream ended! "' + logStream.info.id );
-            delete containerPool[logStream.info.id]; // remove socket object from the pool
+            cleanPool(logStream.info.id);
             logStream.end('!stop!');
         });
 
