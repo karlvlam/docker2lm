@@ -138,7 +138,8 @@ function flattenStats(stats){
     o.mem_rss = stats.memory_stats.stats.total_rss || 0;
     o.mem_usage = stats.memory_stats.usage || 0;
     o.mem_limit = stats.memory_stats.limit || 0;
-    Object.keys(stats.networks).map(function(n){
+    Object.keys(stats.networks).map(function(key){
+        var n = stats.networks[key];
         o.net_tx_byte += n.tx_bytes;
         o.net_rx_byte += n.rx_bytes;
     })
