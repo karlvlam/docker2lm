@@ -48,7 +48,6 @@ var logTimer = null;
 var eventTimer = null;
 var statsTimer = null;
 
-
 function cleanPool(id){
     delete containerPool[id]; // remove socket object from the pool
     delete statsPool[id];
@@ -149,6 +148,19 @@ function flattenStats(stats){
     return o; 
 } 
 
+function getSystemCpuTime(){
+    try{
+        var s = fs.readFileSync('/proc/stat', {encoding:'utf8'});
+        var cpu_time = 0;
+        var line = s.split("\n")[0];
+        var cpu = line.split('cpu')[1].trim().split(' ').map(function(o){ cpu_time += parseInt(o)})
+    }catch(err){
+        return -1;
+    }
+    return cpu_time;
+}
+
+
 function diffStats(a,b){
     var o = {
         read: a.read,
@@ -164,6 +176,7 @@ function diffStats(a,b){
 }
 
 async function logDockerStats(){
+    sys_cpu_time = getSystemCpuTime();
     // get all containers
     var containers = await getContainers();
 
@@ -173,6 +186,8 @@ async function logDockerStats(){
         var s = await a.stats({stream:false});
         var labels = format.getLabel(LABEL_MAP, c['Labels']);
         var a_stats = flattenStats(s);
+        // override system_cpu_usage as the host cpu time
+        a_stats.cpu_stats.system_cpu_usage = sys_cpu_time;
         var b_stats = statsPool[id];
         statsPool[id] = a_stats;
         if (b_stats) {
