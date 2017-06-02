@@ -131,9 +131,20 @@ function flattenStats(stats){
         net_tx_byte: 0,
     }
 
+    function _countCpu(percpu_usage){
+        var count=0;
+        percpu_usage.map(function(o){
+            if (o !== 0){ 
+                count += 1;
+            }
+        })
+        return count;
+
+    }
     o.read = stats.read;
     o.cpu_usage = stats.cpu_stats.cpu_usage.total_usage || 0;
     o.cpu_sys = stats.cpu_stats.system_cpu_usage || 0;
+    o.cpu_num = _countCpu(stats.cpu_stats.cpu_usage.percpu_usage);
     o.mem_rss = stats.memory_stats.stats.total_rss || 0;
     o.mem_usage = stats.memory_stats.usage || 0;
     o.mem_limit = stats.memory_stats.limit || 0;
@@ -166,6 +177,7 @@ function diffStats(a,b){
         read: a.read,
         cpu_usage: a.cpu_usage - b.cpu_usage, 
         cpu_sys: a.cpu_sys - b.cpu_sys,
+        cpu_num: a.cpu_num,
         mem_rss: a.mem_rss,
         mem_usage: a.mem_usage,
         mem_limit: a.mem_limit,
@@ -176,7 +188,7 @@ function diffStats(a,b){
 }
 
 async function logDockerStats(){
-    sys_cpu_time = getSystemCpuTime();
+    //sys_cpu_time = getSystemCpuTime();
     // get all containers
     var containers = await getContainers();
 
@@ -186,8 +198,6 @@ async function logDockerStats(){
         var s = await a.stats({stream:false});
         var labels = format.getLabel(LABEL_MAP, c['Labels']);
         var a_stats = flattenStats(s);
-        // override system_cpu_usage as the host cpu time
-        a_stats.cpu_stats.system_cpu_usage = sys_cpu_time;
         var b_stats = statsPool[id];
         statsPool[id] = a_stats;
         if (b_stats) {
