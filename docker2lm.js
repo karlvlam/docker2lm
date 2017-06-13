@@ -2,16 +2,18 @@
 
 var tls = require('tls');
 var Docker = require('dockerode');
-//var Queue = require('./queue.js').Queue;
 var stream = require('stream');
 var fs = require('fs');
-//var events = require('events');
-//var eventEmitter = require('events').EventEmitter;
 var format = require('./lib/format.js');
 
 var log = function(message){
     console.log('[' + new Date().toISOString() + '] ' + message);
 }
+
+/* Debug only */
+process.on('unhandledRejection', function(reason, p) {
+    console.log("Unhandled Rejection at: Promise ", p, " reason: ", reason);
+});
 
 /* Use ENV VAR as configuration
 {
@@ -148,11 +150,13 @@ function flattenStats(stats){
     o.mem_rss = stats.memory_stats.stats.total_rss || 0;
     o.mem_usage = stats.memory_stats.usage || 0;
     o.mem_limit = stats.memory_stats.limit || 0;
-    Object.keys(stats.networks).map(function(key){
-        var n = stats.networks[key];
-        o.net_tx_byte += n.tx_bytes;
-        o.net_rx_byte += n.rx_bytes;
-    })
+    if (stats.networks){
+        Object.keys(stats.networks).map(function(key){
+            var n = stats.networks[key];
+            o.net_tx_byte += n.tx_bytes;
+            o.net_rx_byte += n.rx_bytes;
+        })
+    }
     if (!o.net_tx_byte) { o.net_tx_byte = 0 }
     if (!o.net_rx_byte) { o.net_rx_byte = 0 }
     
@@ -487,6 +491,9 @@ function listenDockerEvent(){
     })
 
 }
+
+
+
 
 
 
