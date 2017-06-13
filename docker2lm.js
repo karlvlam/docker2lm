@@ -95,8 +95,8 @@ function dockerLogToObj(chunk){
     try{
         var s = chunk.toString();
         return { 
-            marker: CUSTOM_FIELD,
-            type: 'docker-log',
+            "@marker": CUSTOM_FIELD,
+            "@type": 'docker-log',
             timestamp: new Date(s.substr(0, 30)).toISOString(),
             message: s.substr(31).trim()
         }
@@ -110,10 +110,10 @@ function dockerStatsToObj(stats){
         delete stats['read'];
         delete stats['preread'];
         return { 
-            marker: CUSTOM_FIELD,
-            type: 'docker-stats',
+            "@marker": CUSTOM_FIELD,
+            "@type": 'docker-stats',
             timestamp: new Date(t.substr(0, 30)).toISOString(),
-            stats: stats, 
+            "@stats": stats, 
         }
     }catch(err){
     }
@@ -203,7 +203,7 @@ async function logDockerStats(){
         if (b_stats) {
             var o = diffStats(a_stats, b_stats);
             o =  dockerStatsToObj(o);
-            o['labels'] = labels;
+            o['@labels'] = labels;
             api_write(API_KEY, JSON.stringify(o));
         }
 
@@ -332,7 +332,7 @@ function listenDockerLog(info){
         // add the Labels to the real log object
         try{
             // fire the log!
-            l['labels'] = info['labels'];
+            l['@labels'] = info['labels'];
             api_write(API_KEY, JSON.stringify(l));
         }catch(err){
             log('LOG_ERROR: ' + err);
